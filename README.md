@@ -153,7 +153,7 @@ One more [ARM guide](https://developer.arm.com/documentation/dui0231/b/arm-instr
 So all of this work , now i need to do is code in simulator.
 
 ... 
-# Debuugger v2 (may not be stable on linux.. will try windows rn)
+# Debuugger v2 (Did not work but tired it (idk why))
 ## 1. Install the "Big Three" Prerequisites
 
 You need three external tools installed on your computer for VS Code to talk to the micro:bit hardware.
