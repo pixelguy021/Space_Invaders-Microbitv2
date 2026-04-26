@@ -23,7 +23,7 @@ _start:
     ldr r0, =0x50000818      @ GPIO P1 DIRSET
     ldr r1, =(1<<5)
     str r1, [r0]
-
+    ldr r11,=#0
     @ --- Configure Button A (P0.14) ---
              
     ldr r0, =0x50000738    @ PIN_CNF[14]
@@ -37,28 +37,28 @@ _start:
 
     ldr r0,=0x20000000
     @ row1-5
-    ldr r7,=0b00000
+    ldr r7,=0b01110
     str r7,[r0]
-    ldr r7,=0b00000
+    ldr r7,=0b10101
     str r7,[r0, #4]
-    ldr r7,=0b00000
+    ldr r7,=0b10101
     str r7,[r0, #8]
-    ldr r7,=0b00000
+    ldr r7,=0b01110
     str r7,[r0, #12]
     ldr r7,=0b00000
     str r7,[r0, #16]
 
     add r0,r0,#20 @adderss for the skull 
     @ making skull
-    ldr r7,=0b00000
+    ldr r7,=0b01110
     str r7,[r0]
-    ldr r7,=0b00000
+    ldr r7,=0b10101
     str r7,[r0, #4]
-    ldr r7,=0b00000
+    ldr r7,=0b11111
     str r7,[r0, #8]
-    ldr r7,=0b00000
+    ldr r7,=0b01110
     str r7,[r0, #12]
-    ldr r7,=0b00000
+    ldr r7,=0b01110
     str r7,[r0, #16]
 
 
@@ -72,8 +72,11 @@ _start:
     ldr r4, =0b01110   @ Row 4 ( . X X X . )
     ldr r5, =0b00100   @ Row 5 ( . . X . . )
 
-    bl display_loop
-display_loop:
+    bl loop
+
+
+
+loop:
     @ --- Row 1 ---
     mov r6, r1          @ Get Row 1 data
     ldr r7 ,=(1<<21)    @ Row 1 Pin (P0.21)
@@ -110,10 +113,11 @@ display_loop:
     it eq                  @ If result is 0 (Equal to zero), button is PRESSED
     bleq get_random_byte       @ Call your swap function!
 
-
-
-    
-    b display_loop
+    add r11, r11, #1
+    cmp r11, #100          @ Try 100 for ~1.5 seconds
+    it ge
+    blge shoot_up        @ This MUST reset r11 to 0 inside the function
+    b loop
 @ --- Subroutine: Display a Row ---
 @ r6 = row data bits, r7 = row pin mask
 display_row: @r7 is my the row which is active,@ r6 stores what to display 
@@ -135,7 +139,7 @@ display_row: @r7 is my the row which is active,@ r6 stores what to display
     ldr r0 ,=0x50000508
     str r7 ,[r0]
 
-
+    
     @ some optimization i could use r1 for this code too
     @ bit masking r6 to check which leds turn on (stored in r8 , r7 as temp register)
     @ Don't like this wanted to implement it diffreently but IT restriction only allow this way, Now it looks like a variable change
@@ -179,14 +183,14 @@ display_row: @r7 is my the row which is active,@ r6 stores what to display
     str r8,[r0]
 
     
-    mov r9,#(1<<14)
+    mov r9,#(1<<16)
     delay_loop:
         subs r9,r9,#1
         bne delay_loop
 
     ldr r0 ,=0x5000050C
     str r7 ,[r0]
-
+    
     bx lr
 
 
@@ -226,12 +230,6 @@ store_swap:@bring the  state 1 in memory and bring state 2 out of it
     
     bx lr
 
-@ move_rock: @ r1 will be rest anyway when accesing new rocks (r7 main temp , r1 temp temp)
-
-@     mov r7,r1
-@     mov r1,r2
-@     mov r2,r7
-
 
 
 @ @ to try this sinnpet (by displaing the outputs) [Can the register values if conflicting]
@@ -262,6 +260,28 @@ wait_rng:
     mov r1,r0
     bx lr
 
+ 
+move_rock:
+    mov r5, r4    @ Row 4 moves to Row 5
+    mov r4, r3    @ Row 3 moves to Row 4
+    mov r3, r2    @ Row 2 moves to Row 3
+    mov r2, r1    @ Row 1 moves to Row 2
+
+    push {lr}     @ Save Link Register because we are calling another function
+    bl get_random_byte
+    mov r1, r0    @ New random row data into Row 1
+    ldr r11,=#0
+    pop {pc}      @ Return
+    
+shoot_up:
+
+    mov r1,r2
+    mov r2,r3
+    mov r3,r4
+    mov r4,r5
+    push {lr}  
+    ldr r11,=#0
+    pop {pc}
 
 
 @ Ram starting 0x20000000
