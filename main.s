@@ -11,6 +11,7 @@
 .text
 .global _start
 
+
 _start:
     @ --- 1. Set Pin Directions to Output ---
     @ Port 0: Rows (21,22,15,24,19) and Cols (28,11,31,30)
@@ -23,16 +24,56 @@ _start:
     ldr r1, =(1<<5)
     str r1, [r0]
 
+    @ --- Configure Button A (P0.14) ---
+             
+    ldr r0, =0x50000738    @ PIN_CNF[14]
+    ldr r1, =0x0000000C    @ Bits for: Input + Pull-up
+    str r1, [r0]
+
+    ldr r0, =0x5000075C    @ PIN_CNF[14]
+    ldr r1, =0x0000000C    @ Bits for: Input + Pull-up
+    str r1, [r0]
+     @setting state 2 in ram
+
+    ldr r0,=0x20000000
+    @ row1-5
+    ldr r7,=0b00000
+    str r7,[r0]
+    ldr r7,=0b00000
+    str r7,[r0, #4]
+    ldr r7,=0b00000
+    str r7,[r0, #8]
+    ldr r7,=0b00000
+    str r7,[r0, #12]
+    ldr r7,=0b00000
+    str r7,[r0, #16]
+
+    add r0,r0,#20 @adderss for the skull 
+    @ making skull
+    ldr r7,=0b00000
+    str r7,[r0]
+    ldr r7,=0b00000
+    str r7,[r0, #4]
+    ldr r7,=0b00000
+    str r7,[r0, #8]
+    ldr r7,=0b00000
+    str r7,[r0, #12]
+    ldr r7,=0b00000
+    str r7,[r0, #16]
+
+
+
+    @ setting state 1 in registers
     @ --- 2. Load Image Data into r1-r5 ---
     @ A '1' bit means LED ON. We use 5 bits (LSB).
     ldr r1, =0b01010   @ Row 1 ( . X . X . )
     ldr r2, =0b11111   @ Row 2 ( X X X X X )
-    ldr r3, =0b11111   @ Row 3 ( X X X X X )
+    ldr r3, =0b11111 @ Row 3 ( X X X X X )
     ldr r4, =0b01110   @ Row 4 ( . X X X . )
     ldr r5, =0b00100   @ Row 5 ( . . X . . )
 
-    bl loop
-loop:
+    bl display_loop
+display_loop:
     @ --- Row 1 ---
     mov r6, r1          @ Get Row 1 data
     ldr r7 ,=(1<<21)    @ Row 1 Pin (P0.21)
@@ -58,7 +99,21 @@ loop:
     ldr r7, =(1<<19)    @ Row 5 Pin (P0.19)
     bl  display_row
 
-    b loop
+    ldr r0, =0x50000510    @ GPIO P0 IN Register
+    ldr r10, [r0]           @ Read all pins on Port 0
+    tst r10, #(1 << 14)     @ Test bit 14 (Button A)
+    it eq                  @ If result is 0 (Equal to zero), button is PRESSED
+    bleq store_swap        @ Call your swap function!
+
+
+    tst r10, #(1 << 23)     @ Test bit 14 (Button A)
+    it eq                  @ If result is 0 (Equal to zero), button is PRESSED
+    bleq get_random_byte       @ Call your swap function!
+
+
+
+    
+    b display_loop
 @ --- Subroutine: Display a Row ---
 @ r6 = row data bits, r7 = row pin mask
 display_row: @r7 is my the row which is active,@ r6 stores what to display 
@@ -124,7 +179,7 @@ display_row: @r7 is my the row which is active,@ r6 stores what to display
     str r8,[r0]
 
     
-    mov r9,#(1<<15)
+    mov r9,#(1<<14)
     delay_loop:
         subs r9,r9,#1
         bne delay_loop
@@ -135,6 +190,79 @@ display_row: @r7 is my the row which is active,@ r6 stores what to display
     bx lr
 
 
-  
+store_swap:@bring the  state 1 in memory and bring state 2 out of it
+    @ using 3 register (1.copy temp(r7) 2. address holder(r0)) @we need to switch r1,r2,r3,r4,r5
+    ldr r0,=0x20000000 @ starting value of ram
     
+    @row 1
+    mov r7,r1 @ copiped r1 to store
+    ldr r1,[r0] @ load the new value in r1
+    str r7,[r0] @ store the old value from r7 in the ram 
+
+    @ row 2
+    mov r7,r2 @ copiped r2 to store old value in r7
+    ldr r2,[r0, #4] @ load the new value in r2
+    str r7,[r0, #4] @ store the old value from r7 in the ram 
+
+    @ @ row 3
+    mov r7,r3 @ copiped r3 to store old value in r7
+    ldr r3,[r0, #8] @ load the new value in r3
+    str r7,[r0, #8] @ store the old value from r7 in the ram 
     
+    @ row 4
+    mov r7,r4 @ copiped r4 to store old value in r7
+    ldr r4,[r0, #12] @ load the new value in r4
+    str r7,[r0, #12] @ store the old value from r7 in the ram 
+
+   @ row 5    
+    mov r7,r5 @ copiped r5 to store old value in r7
+    ldr r5,[r0, #16] @ load the new value in r5
+    str r7,[r0, #16] @ store the old value from r7 in the ram 
+    
+    mov r9,#(1<<11)
+    delay_loopbutton:
+        subs r9,r9,#1
+        bne delay_loopbutton
+    
+    bx lr
+
+@ move_rock: @ r1 will be rest anyway when accesing new rocks (r7 main temp , r1 temp temp)
+
+@     mov r7,r1
+@     mov r1,r2
+@     mov r2,r7
+
+
+
+@ @ to try this sinnpet (by displaing the outputs) [Can the register values if conflicting]
+get_random_byte:
+    push {r1, r2}
+    
+    @ 1. Start the RNG Task
+    ldr r0, =0x4000D000    @ TASKS_START
+    mov r1, #1
+    str r1, [r0]
+
+    @ 2. Wait for the Value Ready Event
+    ldr r0, =0x4000D100    @ EVENTS_VALRDY
+wait_rng:
+    ldr r1, [r0]           @ Read the event register
+    cmp r1, #0             @ Is it still 0?
+    beq wait_rng           @ If yes, keep waiting
+
+    @ 3. Clear the Event (Mandatory for next time)
+    mov r1, #0
+    str r1, [r0]
+
+    @ 4. Read the Random Byte
+    ldr r0, =0x4000D508    @ VALUE register
+    ldr r0, [r0]           @ r0 now contains a number 0-255
+    and r0,r0, #0b11111   @ so that any new value can fit in the row
+    pop {r1, r2}
+    mov r1,r0
+    bx lr
+
+
+
+@ Ram starting 0x20000000
+
