@@ -66,34 +66,25 @@ _start:
     ldr r1, =0b0000000000000000000000000   @ Row 1 ( . X . X . )
     ldr r2, =0b0000000000000000000000000
     ldr r3, =0b0000000000000000000000100
-   
-
+    ldr r8, =#0
     b game_loop
 
 
 @ bx lr only works one layer deep
     
-
+ 
 game_loop:
 
-    mov r10,#1
-    render:
-       bl loop
-       subs r10,r10,#1
-        bne render
+
     
-        @ swap
-    mov r7,r1
-    mov r1,r2
-    mov r2,r7
-       @ swap end
+
 
     add r12, r12, #1
-    cmp r12, #10        @ Try 100 for ~1.5 seconds
+    cmp r12, #30     @ Try 100 for ~1.5 seconds
     it ge
     blge move_rock   
     
-    mov r10,#1
+    mov r10,#3
     render1:
             @ stores 
         bl loop               @ Call your 5-row scan
@@ -119,11 +110,24 @@ game_loop:
 
 
     add r11, r11, #1
-    cmp r11, #5        @ Try 100 for ~1.5 seconds
+    cmp r11, #10        @ Try 100 for ~1.5 seconds
     it ge
     blge shoot_up        @ This MUST reset r11 to 0 inside the function
 
+    bl collison_Scheck
+
+    mov r10,#1
+    render:
+       bl loop
+       subs r10,r10,#1
+        bne render
+            @ swap
+    mov r7,r1
+    mov r1,r2
+    mov r2,r7
+       @ swap end
     
+
     @ cmp r11, #19         @ Try 100 for ~1.5 seconds
     @ it ge
     @ blge collison_check
@@ -177,70 +181,70 @@ display_row: @r7 is my the row which is active,@ r6 stores what to display
     
     @setting all clm to high and main value too high , now trying cmp thing 
     ldr r0 ,=0x50000508
-    ldr r8 ,=((1<<28)|(1<<11)|(1<<30)|(1<<31))
-    str r8 ,[r0]
+    ldr r5 ,=((1<<28)|(1<<11)|(1<<30)|(1<<31))
+    str r5 ,[r0]
 
     
     ldr r0 ,=0x50000808
-    ldr r8 ,=(1<<5)
-    str r8 ,[r0]
+    ldr r5 ,=(1<<5)
+    str r5 ,[r0]
 
     ldr r0 ,=0x50000508
     str r7 ,[r0]
 
     
     @ some optimization i could use r1 for this code too
-    @ bit masking r6 to check which leds turn on (stored in r8 , r7 as temp register)
+    @ bit masking r6 to check which leds turn on (stored in r5 , r7 as temp register)
     @ Don't like this wanted to implement it diffreently but IT restriction only allow this way, Now it looks like a variable change
         @ clm 4 
         ldr r0 ,=0x5000080C
-        mov r8,#1<<5
+        mov r5,#1<<5
 
         tst r6,#(1<<1)
         ite ne
-        orrne r8,r8,r8
-        andeq r8, r8,#0b11111111111111111111111111011111
-        str r8, [r0]
+        orrne r5,r5,r5
+        andeq r5, r5,#0b11111111111111111111111111011111
+        str r5, [r0]
         
-        mov r8, #0
+        mov r5, #0
         @right most led so clm 5
           @clm 3
-        orr r8,r8,#(1<<31)
+        orr r5,r5,#(1<<31)
         tst r6, #(1<<2)
         ite ne
-        orrne r8,r8,r8
-        andeq r8, r8,#0b01111111111111111111111111111111
+        orrne r5,r5,r5
+        andeq r5, r5,#0b01111111111111111111111111111111
         
         @ldr r10 ,=(1<<30)
 
-        orr r8,r8,#(1<<30)
+        orr r5,r5,#(1<<30)
         tst r6, #1
         ite ne
-        orrne r8,r8,r8
-        andeq r8, r8,#0b10111111111111111111111111111111
+        orrne r5,r5,r5
+        andeq r5, r5,#0b10111111111111111111111111111111
 
       
         @clm 2
         @ldr r10 ,=((1<<11))
-        orr r8,r8,#(1<<11)
+        orr r5,r5,#(1<<11)
         tst r6, #(1<<3)
         ite ne
-        orrne r8,r8,r8
-        andeq r8, r8,#0b11111111111111111111011111111111
+        orrne r5,r5,r5
+        andeq r5, r5,#0b11111111111111111111011111111111
 
         @clm 1
         @ldr r10 ,=((1<<28))
-        orr r8,r8,#(1<<28)
+        orr r5,r5,#(1<<28)
         tst r6, #(1<<4)
         ite ne
-        orrne r8,r8,r8
-        andeq r8, r8,#0b11101111111111111111111111111111
+        orrne r5,r5,r5
+        andeq r5, r5,#0b11101111111111111111111111111111
 
     ldr r0,=0x5000050C
-    str r8,[r0]
+    str r5,[r0]
 
     
-    mov r9,#(1<<16)
+    mov r9,#(1<<14)
     delay_loop:
         subs r9,r9,#1
         bne delay_loop
@@ -250,39 +254,6 @@ display_row: @r7 is my the row which is active,@ r6 stores what to display
     
     bx lr
 
-
-store_swap:@bring the  state 1 in memory and bring state 2 out of it
-    @ using 3 register (1.copy temp(r7) 2. address holder(r0)) @we need to switch r1,r2,r3,r4,r5
-@     ldr r0,=0x20000000 @ starting value of ram
-    
-@     @row 1
-@     mov r7,r1 @ copiped r1 to store
-@     ldr r1,[r0] @ load the new value in r1
-@     str r7,[r0] @ store the old value from r7 in the ram 
-
-@     @ row 2
-@     mov r7,r2 @ copiped r2 to store old value in r7
-@     ldr r2,[r0, #4] @ load the new value in r2
-@     str r7,[r0, #4] @ store the old value from r7 in the ram 
-
-@     @ @ row 3
-@     mov r7,r3 @ copiped r3 to store old value in r7
-@     ldr r3,[r0, #8] @ load the new value in r3
-@     str r7,[r0, #8] @ store the old value from r7 in the ram 
-    
-@     @ row 4
-@     mov r7,r4 @ copiped r4 to store old value in r7
-@     ldr r4,[r0, #12] @ load the new value in r4
-@     str r7,[r0, #12] @ store the old value from r7 in the ram 
-
-@    @ row 5    
-@     mov r7,r5 @ copiped r5 to store old value in r7
-@     ldr r5,[r0, #16] @ load the new value in r5
-@     str r7,[r0, #16] @ store the old value from r7 in the ram 
-    
-@     mov r9,#(1<<11)
-
-    bx lr
 
 
 
@@ -323,6 +294,11 @@ move_rock:
     @ mov r2, r1    @ Row 1 moves to Row 2
     lsl r1,r1,5 
     @ i need in the last 5 bit any one is 1 after the move the trigger game over
+    ldr r5,=#0b00000001111100000000000000000000
+    and r5,r1,r5 @ the top 5 bits
+    cmp r5,#0
+    bne game_over
+
     mov r5,r1
     push {lr}     @ Save Link Register because we are calling another function
     bl get_random_byte
@@ -358,7 +334,51 @@ move_right:
         moveq r3, #1      @ Snap back to rightmost column (bit 0)
       bx lr
 
+collison_Scheck:@ considering bullets are in r1 , so after 1 swap
+    push {lr}
+    eor r4,r1,r2  @xor of both
+    mov r5,r2 @ copy of old bits for score 
+    @ FOR ROCK
+    and r2,r2,r4
+    @  old - new and num of in them should give me score
+    sub r5,r5,r2 @ old - new
+    @ count number of bits in r5
+    count:
+        tst r5,#1 
+        it ne
+        addne r8,r8,#1
+        lsr r5,r5,1
+        cmp r5,#0
+        bne count
+    @ the score would be number of bits in 
 
+    @ for shooting
+    and r4,r1,r4
+    sub r4,r1,r4
+    @ no score for now
 
+    pop {pc}
 @ Ram starting 0x20000000
 
+game_over:
+    ldr r1,=#0b00011100111001110111111010101110
+    
+    ldr r3,=#0
+    mov r10,#270
+    render3:
+       bl loop
+       subs r10,r10,#1
+        bne render3
+
+    mov r1,r8
+
+    render4:
+        bl loop
+        b render4
+
+
+    
+    
+    
+    
+    
