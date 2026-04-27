@@ -11,7 +11,7 @@
 .text
 .global _start
 
-
+@ i will rewrite by code 
 _start:
     @ --- 1. Set Pin Directions to Output ---
     @ Port 0: Rows (21,22,15,24,19) and Cols (28,11,31,30)
@@ -36,42 +36,37 @@ _start:
     str r1, [r0]
      @setting state 2 in ram
 
-    ldr r0,=0x20000000
+    @ =r1 will be the rock array ( main in the begin)
+    @ r2 will be the shoot array (secondary)
+    @ r3 will be player row
     @ row1-5
-    ldr r7,=0b00000
-    str r7,[r0]
-    ldr r7,=0b00000
-    str r7,[r0, #4]
-    ldr r7,=0b00000
-    str r7,[r0, #8]
-    ldr r7,=0b00000
-    str r7,[r0, #12]
-    ldr r7,=0b00100
-    str r7,[r0, #16]
+    
 
-    add r0,r0,#20 @adderss for the skull 
-    @ making skull
-    ldr r7,=0b01110
-    str r7,[r0]
-    ldr r7,=0b10101
-    str r7,[r0, #4]
-    ldr r7,=0b11111
-    str r7,[r0, #8]
-    ldr r7,=0b01110
-    str r7,[r0, #12]
-    ldr r7,=0b01110
-    str r7,[r0, #16]
+
+
+
+    @ add r0,r0,#20 @adderss for the skull 
+    @ @ making skull
+    @ ldr r7,=0b01110
+    @ str r7,[r0]
+    @ ldr r7,=0b10101
+    @ str r7,[r0, #4]
+    @ ldr r7,=0b11111
+    @ str r7,[r0, #8]
+    @ ldr r7,=0b01110
+    @ str r7,[r0, #12]
+    @ ldr r7,=0b01110
+    @ str r7,[r0, #16]
 
 
 
     @ setting state 1 in registers
     @ --- 2. Load Image Data into r1-r5 ---
     @ A '1' bit means LED ON. We use 5 bits (LSB).
-    ldr r1, =0b11111   @ Row 1 ( . X . X . )
-    ldr r2, =0b10001   @ Row 2 ( X X X X X )
-    ldr r3, =0b11011 @ Row 3 ( X X X X X )
-    ldr r4, =0b11111   @ Row 4 ( . X X X . )
-    ldr r5, =0b10001   @ Row 5 ( . . X . . )
+    ldr r1, =0b0000000000000000000000000   @ Row 1 ( . X . X . )
+    ldr r2, =0b0000000000000000000000000
+    ldr r3, =0b0000000000000000000000100
+   
 
     b game_loop
 
@@ -80,7 +75,6 @@ _start:
     
 
 game_loop:
-    
 
     mov r10,#1
     render:
@@ -88,9 +82,14 @@ game_loop:
        subs r10,r10,#1
         bne render
     
-    bl store_swap 
+        @ swap
+    mov r7,r1
+    mov r1,r2
+    mov r2,r7
+       @ swap end
+
     add r12, r12, #1
-    cmp r12, #100        @ Try 100 for ~1.5 seconds
+    cmp r12, #10        @ Try 100 for ~1.5 seconds
     it ge
     blge move_rock   
     
@@ -101,7 +100,11 @@ game_loop:
         subs r10, r10, #1
         bne render1
         
-    bl store_swap
+        @ swap
+    mov r7,r1
+    mov r1,r2
+    mov r2,r7
+       @ swap ends
     
     ldr r0, =0x50000510    @ GPIO P0 IN Register
     ldr r10, [r0]           @ Read all pins on Port 0
@@ -116,9 +119,14 @@ game_loop:
 
 
     add r11, r11, #1
-    cmp r11, #20         @ Try 100 for ~1.5 seconds
+    cmp r11, #5        @ Try 100 for ~1.5 seconds
     it ge
     blge shoot_up        @ This MUST reset r11 to 0 inside the function
+
+    
+    @ cmp r11, #19         @ Try 100 for ~1.5 seconds
+    @ it ge
+    @ blge collison_check
 
     
     
@@ -127,29 +135,36 @@ game_loop:
 loop:
     push {lr}
     @ --- Row 1 ---
-    mov r6, r1          @ Get Row 1 data
-    ldr r7 ,=(1<<21)    @ Row 1 Pin (P0.21)
-    bl  display_row
+    mov r6,r1 @ our temp register r6
+    @modify this r6
 
-    @ --- Row 2 ---
-    mov r6 , r2
-    ldr r7 , =(1<<22)    @ Row 2 Pin (P0.22)
-    bl  display_row
+    @first row
+    ldr r7,=(1<<21)
+    bl display_row
+    
+    lsr r6,r6,5
+    ldr r7,=(1<<22)
 
-    @ --- Row 3 ---
-    mov r6 , r3
-    ldr r7 ,=(1<<15)    @ Row 3 Pin (P0.15)
-    bl  display_row
+    bl display_row
 
-    @ --- Row 4 ---
-    mov r6, r4
-    ldr r7, =(1<<24)    @ Row 4 Pin (P0.24)
-    bl  display_row
+    lsr r6,r6,5
+    ldr r7,=(1<<15)
 
-    @ --- Row 5 ---
-    mov r6 ,r5
-    ldr r7, =(1<<19)    @ Row 5 Pin (P0.19)
-    bl  display_row
+    bl display_row
+
+    lsr r6,r6,5
+    ldr r7,=(1<<24)
+
+    bl display_row
+
+    lsr r6,r6,5
+    ldr r7,=(1<<19)
+
+    bl display_row
+
+    mov r6,r3
+    ldr r7,=(1<<19)
+    bl display_row
 
     pop {pc}
 @ --- Subroutine: Display a Row ---
@@ -238,38 +253,35 @@ display_row: @r7 is my the row which is active,@ r6 stores what to display
 
 store_swap:@bring the  state 1 in memory and bring state 2 out of it
     @ using 3 register (1.copy temp(r7) 2. address holder(r0)) @we need to switch r1,r2,r3,r4,r5
-    ldr r0,=0x20000000 @ starting value of ram
+@     ldr r0,=0x20000000 @ starting value of ram
     
-    @row 1
-    mov r7,r1 @ copiped r1 to store
-    ldr r1,[r0] @ load the new value in r1
-    str r7,[r0] @ store the old value from r7 in the ram 
+@     @row 1
+@     mov r7,r1 @ copiped r1 to store
+@     ldr r1,[r0] @ load the new value in r1
+@     str r7,[r0] @ store the old value from r7 in the ram 
 
-    @ row 2
-    mov r7,r2 @ copiped r2 to store old value in r7
-    ldr r2,[r0, #4] @ load the new value in r2
-    str r7,[r0, #4] @ store the old value from r7 in the ram 
+@     @ row 2
+@     mov r7,r2 @ copiped r2 to store old value in r7
+@     ldr r2,[r0, #4] @ load the new value in r2
+@     str r7,[r0, #4] @ store the old value from r7 in the ram 
 
-    @ @ row 3
-    mov r7,r3 @ copiped r3 to store old value in r7
-    ldr r3,[r0, #8] @ load the new value in r3
-    str r7,[r0, #8] @ store the old value from r7 in the ram 
+@     @ @ row 3
+@     mov r7,r3 @ copiped r3 to store old value in r7
+@     ldr r3,[r0, #8] @ load the new value in r3
+@     str r7,[r0, #8] @ store the old value from r7 in the ram 
     
-    @ row 4
-    mov r7,r4 @ copiped r4 to store old value in r7
-    ldr r4,[r0, #12] @ load the new value in r4
-    str r7,[r0, #12] @ store the old value from r7 in the ram 
+@     @ row 4
+@     mov r7,r4 @ copiped r4 to store old value in r7
+@     ldr r4,[r0, #12] @ load the new value in r4
+@     str r7,[r0, #12] @ store the old value from r7 in the ram 
 
-   @ row 5    
-    mov r7,r5 @ copiped r5 to store old value in r7
-    ldr r5,[r0, #16] @ load the new value in r5
-    str r7,[r0, #16] @ store the old value from r7 in the ram 
+@    @ row 5    
+@     mov r7,r5 @ copiped r5 to store old value in r7
+@     ldr r5,[r0, #16] @ load the new value in r5
+@     str r7,[r0, #16] @ store the old value from r7 in the ram 
     
-    mov r9,#(1<<11)
-    delay_loopbutton:
-        subs r9,r9,#1
-        bne delay_loopbutton
-    
+@     mov r9,#(1<<11)
+
     bx lr
 
 
@@ -305,45 +317,48 @@ wait_rng:
  
 move_rock:
     @ i don't need 7&6 so they will be used
-    mov r5, r4    @ Row 4 moves to Row 5
-    mov r4, r3    @ Row 3 moves to Row 4
-    mov r3, r2    @ Row 2 moves to Row 3
-    mov r2, r1    @ Row 1 moves to Row 2
-
+    @ mov r5, r4    @ Row 4 moves to Row 5
+    @ mov r4, r3    @ Row 3 moves to Row 4
+    @ mov r3, r2    @ Row 2 moves to Row 3
+    @ mov r2, r1    @ Row 1 moves to Row 2
+    lsl r1,r1,5 
+    @ i need in the last 5 bit any one is 1 after the move the trigger game over
+    mov r5,r1
     push {lr}     @ Save Link Register because we are calling another function
     bl get_random_byte
-    mov r1, r0    @ New random row data into Row 1
+    orr r1,r5,r0    @ New random row data into Row 1
     ldr r12,=#0
     pop {pc}      @ Return
     
 shoot_up:
 
-    mov r1,r2
-    mov r2,r3
-    mov r3,r4
-    mov r4,r5
+    @ mov r1,r2
+    @ mov r2,r3
+    @ mov r3,r4
+    @ mov r4,r5
+    lsr r1,r1,5
+    lsl r5,r3,15
+    orr r1,r1,r5
     push {lr}  
     ldr r11,=#0
 
-    
-   
     pop {pc}
 move_left:
     @ and Button A (Left) is pressed:
-        lsl r5, r5, #1    @ Move player left
-        cmp r5, #(1 << 5) @ Check if we went off the 5-bit screen
+        lsl r3, r3, #1    @ Move player left
+        cmp r3, #(1 << 5) @ Check if we went off the 5-bit screen
         it hs             @ If Higher or Same
-        movhs r5, #(1 << 4) @ Snap back to leftmost column (bit 4)
-          bx lr
+        movhs r3, #(1 << 4) @ Snap back to leftmost column (bit 4)
+        bx lr
 move_right:
     @ and Button B (Right) is pressed:
-        lsr r5, r5, #1    @ Move player right
-        cmp r5, #0        @ Check if we shifted out to zero
+        lsr r3, r3, #1    @ Move player right
+        cmp r3, #0        @ Check if we shifted out to zero
         it eq
-        moveq r5, #1      @ Snap back to rightmost column (bit 0)
+        moveq r3, #1      @ Snap back to rightmost column (bit 0)
       bx lr
 
-compare_score:
+
 
 @ Ram starting 0x20000000
 
