@@ -281,7 +281,10 @@ shoot_up:
     mov r4,r5
     push {lr}  
     ldr r11,=#0
+    
+
     pop {pc}
+
 
 
 @ Ram starting 0x20000000
