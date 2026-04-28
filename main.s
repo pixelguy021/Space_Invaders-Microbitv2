@@ -80,11 +80,11 @@ game_loop:
 
 
     add r12, r12, #1
-    cmp r12, #30     @ Try 100 for ~1.5 seconds
+    cmp r12, #32    @ Try 100 for ~1.5 seconds
     it ge
     blge move_rock   
     
-    mov r10,#3
+    mov r10,#1
     render1:
             @ stores 
         bl loop               @ Call your 5-row scan
@@ -110,13 +110,13 @@ game_loop:
 
 
     add r11, r11, #1
-    cmp r11, #10        @ Try 100 for ~1.5 seconds
+    cmp r11, #10      @ Try 100 for ~1.5 seconds
     it ge
     blge shoot_up        @ This MUST reset r11 to 0 inside the function
 
     bl collison_Scheck
 
-    mov r10,#1
+    mov r10,#2
     render:
        bl loop
        subs r10,r10,#1
@@ -353,10 +353,8 @@ collison_Scheck:@ considering bullets are in r1 , so after 1 swap
     @ the score would be number of bits in 
 
     @ for shooting
-    and r4,r1,r4
-    sub r4,r1,r4
+    and r1,r1,r4
     @ no score for now
-
     pop {pc}
 @ Ram starting 0x20000000
 
