@@ -69,7 +69,8 @@ Some logic for this is to occupy cpu in a lot of compute so it spends a some tim
 | r9            | Data      | Remaining lives                                                                                   | death                                                                                                                       |
 | r10           | Temp      | Clock durations                                                                                   | all render functions                                                                                                        |
 | r11           | Data      | Hold tick for move rock                                                                           | start, game_loop, move_rock                                                                                                 |
-| r12           | Data      | Hold tick for shoot up                                                                            | start, game_loop, move_rock                                                                                                 |
+| r12           | Data      | Hold tick for shoot up                                                                            | start, game_loop, move_rock   
+
 Note : This is definitely the not most efficient but the register  sort nicely so i am keeping this way 
 ### Hardware 
 #### LEDs
