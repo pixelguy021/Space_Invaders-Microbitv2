@@ -1,4 +1,4 @@
-# Space Invaders for MicrobitV2 (on assembly (hand coded no AI))
+# Space Invaders for MicrobitV2 
 ## Objective 
 The objective of this was to use the microbit v2.2 and create a space invaders/ asteroids like game. The basic working of the game space invaders where aliens come down from the top and you move around to shoot the asteroids to get points :) , pretty neat. (This has rocks instead of aliens so they don't shoot back, and no cover to hide because they are rocks)
 <img width="737" height="789" alt="Pasted image 20260327235254" src="https://github.com/user-attachments/assets/4daceb8f-ce55-447e-bed7-79b06a379843" />
